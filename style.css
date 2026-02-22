@@ -1,0 +1,341 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap');
+
+/* ─── Reset ─── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --neon-gold: #f5c518;
+  --neon-orange: #ff6b00;
+  --neon-red: #ff2020;
+  --neon-green: #00ff88;
+  --bg-primary: #06060a;
+  --text-primary: #e8e8f0;
+  --text-secondary: #8888aa;
+  --text-dim: #4a4a60;
+  --border-color: #1e1e30;
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--neon-gold);
+  border-radius: 3px;
+}
+
+/* ─── Body / Background ─── */
+body {
+  font-family: 'Rajdhani', sans-serif;
+  min-height: 100vh;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+/* ─── Animated city background ─── */
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background:
+    radial-gradient(ellipse at 20% 80%, rgba(255, 107, 0, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(245, 197, 24, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0.5) 0%, transparent 70%),
+    url('../assets/gta-logo.png') center/cover no-repeat;
+}
+
+/* Dark overlay — lighter so image is more visible */
+.login-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 4, 8, 0.18);
+  z-index: 0;
+}
+
+/* Scanlines */
+.login-container::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 0, 0, 0.04) 3px,
+      rgba(0, 0, 0, 0.04) 6px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── Form card ─── */
+.login-form {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  margin: 1rem;
+  padding: 44px 40px;
+  background: rgba(6, 6, 12, 0.22);
+  backdrop-filter: blur(26px) saturate(1.4);
+  -webkit-backdrop-filter: blur(26px) saturate(1.4);
+  border: 1px solid rgba(245, 197, 24, 0.30);
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 1px rgba(245, 197, 24, 0.08),
+    0 25px 60px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  opacity: 0;
+  transform: translateY(30px);
+  animation: slideUp 0.5s cubic-bezier(.22, .68, 0, 1.2) 0.1s forwards;
+}
+
+@keyframes slideUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Top gold bar */
+.login-form::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--neon-gold), transparent);
+  border-radius: 2px;
+}
+
+/* ─── Header ─── */
+.form-brand {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.form-brand .brand-logo {
+  font-family: 'Orbitron', monospace;
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--neon-gold);
+  text-shadow: 0 0 20px rgba(245, 197, 24, 0.5), 0 0 40px rgba(245, 197, 24, 0.2);
+  letter-spacing: 4px;
+  line-height: 1;
+}
+
+.form-brand .brand-sub {
+  font-size: 10px;
+  color: var(--text-secondary);
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+
+.login-form h1 {
+  font-family: 'Orbitron', monospace;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+/* ─── Form fields ─── */
+.form-group {
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group:focus-within {
+  border-color: rgba(245, 197, 24, 0.5);
+  box-shadow: 0 0 0 2px rgba(245, 197, 24, 0.08);
+}
+
+.form-group span {
+  font-size: 18px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.form-group:focus-within span {
+  color: var(--neon-gold);
+}
+
+.input-wrapper {
+  flex: 1;
+  position: relative;
+}
+
+.input-wrapper label {
+  position: absolute;
+  font-size: 12px;
+  color: var(--text-secondary);
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  transition: 0.25s ease;
+  pointer-events: none;
+  letter-spacing: 1px;
+}
+
+.input-wrapper input:not(:placeholder-shown)~label,
+.input-wrapper input:focus~label {
+  font-size: 9px;
+  top: -8px;
+  transform: translateY(0);
+  color: var(--neon-gold);
+}
+
+.input-wrapper input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+  padding-top: 4px;
+}
+
+/* ─── Error message ─── */
+.form-error {
+  font-size: 12px;
+  color: var(--neon-red);
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  background: rgba(255, 32, 32, 0.08);
+  border: 1px solid rgba(255, 32, 32, 0.25);
+  border-radius: 6px;
+  display: none;
+}
+
+.form-error.show {
+  display: block;
+}
+
+/* ─── Submit Button ─── */
+.submit-btn {
+  width: 100%;
+  padding: 13px;
+  outline: none;
+  border: 1px solid rgba(245, 197, 24, 0.5);
+  border-radius: 8px;
+  font-family: 'Orbitron', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #000;
+  background: linear-gradient(135deg, var(--neon-gold) 0%, var(--neon-orange) 100%);
+  cursor: pointer;
+  transition: all 0.25s;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.submit-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.4s;
+}
+
+.submit-btn:hover::before {
+  left: 100%;
+}
+
+.submit-btn:hover {
+  box-shadow: 0 0 20px rgba(245, 197, 24, 0.4), 0 4px 20px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+.submit-btn:active {
+  transform: translateY(0);
+}
+
+/* ─── Register link ─── */
+.register {
+  color: var(--text-secondary);
+  text-align: center;
+  font-size: 13px;
+}
+
+.register a {
+  color: var(--neon-gold);
+  text-decoration: none;
+  font-weight: 700;
+  transition: text-shadow 0.2s;
+}
+
+.register a:hover {
+  text-shadow: 0 0 10px rgba(245, 197, 24, 0.5);
+}
+
+/* ─── Toast (auth pages) ─── */
+.auth-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(10, 10, 16, 0.95);
+  border: 1px solid rgba(245, 197, 24, 0.4);
+  border-radius: 8px;
+  padding: 14px 18px;
+  font-size: 14px;
+  color: var(--text-primary);
+  box-shadow: 0 0 20px rgba(245, 197, 24, 0.15), 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Rajdhani', sans-serif;
+  animation: toastIn 0.4s ease forwards;
+  max-width: 320px;
+}
+
+.auth-toast.error {
+  border-color: rgba(255, 32, 32, 0.4);
+  box-shadow: 0 0 20px rgba(255, 32, 32, 0.15);
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
