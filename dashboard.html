@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Los Santos — Command Center</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⭐</text></svg>"/>
+
+  <!-- Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet"/>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/dashboard.css"/>
+
+  <style>
+    /* ─── Inline extras ─── */
+    .ring-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+    .ring-inner { position: absolute; text-align: center; }
+    .ring-val { font-family:'Orbitron',monospace; font-size:22px; font-weight:700; }
+    .ring-lbl { font-size:10px; color:var(--text-secondary); letter-spacing:1px; }
+
+    .achievement-list { display:flex; flex-wrap:wrap; gap:8px; }
+    .achievement {
+      background: rgba(245,197,24,0.08);
+      border: 1px solid rgba(245,197,24,0.25);
+      border-radius:6px;
+      padding:6px 10px;
+      display:flex; align-items:center; gap:6px;
+      font-size:12px; color:var(--neon-gold);
+    }
+    .achievement.locked { opacity:0.35; filter:grayscale(1); }
+
+    .territory-item { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+    .territory-name { min-width:110px; font-size:13px; color:var(--text-secondary); }
+    .territory-bar-wrap { flex:1; height:6px; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; }
+    .territory-bar { height:100%; border-radius:4px; transition:width 0.8s ease; }
+    .territory-pct { font-size:12px; font-family:'Share Tech Mono',monospace; min-width:36px; text-align:right; }
+
+    .streak-box {
+      display:flex; align-items:center; gap:12px;
+      background: rgba(255,107,0,0.08);
+      border:1px solid rgba(255,107,0,0.3);
+      border-radius:8px; padding:12px 16px;
+      margin-top:12px;
+    }
+    .streak-num { font-family:'Orbitron',monospace; font-size:28px; font-weight:900; color:var(--neon-orange); text-shadow:0 0 20px var(--neon-orange); }
+    .streak-label { font-size:11px; color:var(--text-secondary); letter-spacing:1px; }
+    .streak-bonus { font-size:13px; font-weight:700; color:var(--neon-orange); }
+
+    .cooldown-wrap { margin-top:12px; }
+    .cooldown-label { font-size:11px; color:var(--text-secondary); letter-spacing:1px; margin-bottom:6px; display:flex; justify-content:space-between; }
+    .cooldown-bar { height:6px; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; }
+    .cooldown-fill { height:100%; border-radius:4px; background:linear-gradient(90deg, var(--neon-blue), var(--neon-green)); transition:width 1s linear; }
+
+    .topbar-hamburger { display:none; background:none; border:none; color:var(--neon-gold); font-size:22px; cursor:pointer; }
+    @media(max-width:900px){ .topbar-hamburger{display:block;} }
+
+    /* Map mini panel link */
+    .map-link-btn {
+      display:flex; align-items:center; justify-content:center; gap:8px;
+      padding:14px; border-radius:8px;
+      background:rgba(0,212,255,0.07); border:1px solid rgba(0,212,255,0.3);
+      color:var(--neon-blue); text-decoration:none;
+      font-size:14px; font-weight:700; font-family:'Rajdhani',sans-serif;
+      letter-spacing:2px; text-transform:uppercase;
+      transition:all 0.2s; margin-top:10px;
+    }
+    .map-link-btn:hover { background:rgba(0,212,255,0.15); box-shadow:var(--glow-blue); transform:translateY(-2px); }
+
+    /* Dark/Light toggle */
+    [data-theme="light"] {
+      --bg-primary: #f0f0f5;
+      --bg-secondary: #e0e0ea;
+      --bg-card: #ffffff;
+      --border-color: #d0d0e0;
+      --text-primary: #1a1a2e;
+      --text-secondary: #555570;
+      --text-dim: #aaaacc;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ═══════════════════════════════
+     SIDEBAR
+═══════════════════════════════ -->
+<div class="app-wrapper">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">LS</div>
+      <div class="logo-sub">Command Center</div>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebarAvatar">?</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebarUserName">Agent</div>
+        <div class="user-rank" id="sidebarRank">Street Hustler</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item active" href="dashboard.html">
+        <span class="nav-icon"><i class="ri-dashboard-3-line"></i></span> Dashboard
+      </a>
+      <a class="nav-item" href="map.html">
+        <span class="nav-icon"><i class="ri-map-2-line"></i></span> City Map
+      </a>
+      <a class="nav-item" href="missions.html">
+        <span class="nav-icon"><i class="ri-sword-line"></i></span> Missions
+      </a>
+      <a class="nav-item" href="replay.html">
+        <span class="nav-icon"><i class="ri-movie-2-line"></i></span> Activity Replay
+      </a>
+
+      <div class="nav-section-label" style="margin-top:12px;">Monitoring</div>
+      <a class="nav-item" href="#crimePanel" onclick="scrollToPanel('crimePanel')">
+        <span class="nav-icon"><i class="ri-radar-line"></i></span> Criminal Status
+      </a>
+      <a class="nav-item" href="#territoryPanel" onclick="scrollToPanel('territoryPanel')">
+        <span class="nav-icon"><i class="ri-building-2-line"></i></span> Territory
+      </a>
+      <a class="nav-item" href="#statsRow" onclick="scrollToPanel('statsRow')">
+        <span class="nav-icon"><i class="ri-bar-chart-line"></i></span> Analytics
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logoutUser()">
+        <i class="ri-logout-box-r-line"></i> LOG OUT
+      </button>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════════════════
+       MAIN CONTENT
+  ═══════════════════════════════ -->
+  <div class="main-content">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <button class="topbar-hamburger" onclick="document.getElementById('sidebar').classList.toggle('open')">
+          <i class="ri-menu-line"></i>
+        </button>
+        <span class="topbar-title">CRIMINAL COMMAND</span>
+      </div>
+      <div class="topbar-right">
+        <!-- Wanted Stars -->
+        <div class="wanted-stars" id="wantedStars" title="Wanted Level">
+          <span class="star active" id="star1">★</span>
+          <span class="star active" id="star2">★</span>
+          <span class="star" id="star3">★</span>
+          <span class="star" id="star4">★</span>
+          <span class="star" id="star5">★</span>
+        </div>
+        <!-- Clock -->
+        <div class="topbar-clock" id="topbarClock">00:00:00</div>
+        <!-- Theme toggle -->
+        <button onclick="toggleTheme()" title="Toggle theme" style="background:none;border:none;color:var(--text-secondary);font-size:18px;cursor:pointer;">
+          <i class="ri-contrast-2-line" id="themeIcon"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- PAGE CONTENT -->
+    <div class="page-content">
+
+      <div class="page-header">
+        <h1>⚡ COMMAND CENTER</h1>
+        <p id="greetingLine">Welcome back, Agent. Stay sharp — heat is rising.</p>
+      </div>
+
+      <!-- ─── STAT CARDS ─── -->
+      <div class="stats-grid" id="statsRow">
+
+        <!-- Cash -->
+        <div class="stat-card gold">
+          <div class="card-icon">💰</div>
+          <div class="card-label">Total Cash</div>
+          <div class="card-value" id="cashValue">$0</div>
+          <div class="card-sub">+<span id="cashDelta">0</span> this session</div>
+        </div>
+
+        <!-- Heat -->
+        <div class="stat-card red">
+          <div class="card-icon">🔥</div>
+          <div class="card-label">Heat Level</div>
+          <div class="card-value" id="heatValue">0%</div>
+          <div class="heat-bar-wrap"><div class="heat-bar-fill" id="heatBar" style="width:0%"></div></div>
+          <div class="card-sub" id="heatStatus">Cool</div>
+        </div>
+
+        <!-- Active Ops -->
+        <div class="stat-card blue">
+          <div class="card-icon">🎯</div>
+          <div class="card-label">Active Operations</div>
+          <div class="card-value" id="opsValue">0</div>
+          <div class="card-sub" id="opsSub">None running</div>
+        </div>
+
+        <!-- Territory -->
+        <div class="stat-card green">
+          <div class="card-icon">🏙️</div>
+          <div class="card-label">Territory Control</div>
+          <div class="card-value" id="territoryValue">0%</div>
+          <div class="card-sub" id="territorySub">Expand your empire</div>
+        </div>
+
+      </div><!-- /stats-grid -->
+
+      <!-- ─── ROW 2: Criminal Status + Quick Actions + Empire ─── -->
+      <div class="dashboard-grid" id="crimePanel">
+
+        <!-- LEFT: Criminal Status Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title"><span class="title-icon">🚨</span> Criminal Status</span>
+            <span class="panel-badge badge-red" id="statusBadge">AT LARGE</span>
+          </div>
+          <div class="panel-body">
+            <div class="criminal-status">
+              <div class="status-badge-row">
+                <div class="status-indicator at-large" id="statusDot"></div>
+                <span class="status-text" id="statusLabel">AT LARGE</span>
+              </div>
+
+              <div class="status-meta-row">
+                <div class="status-meta-item">
+                  <span class="meta-label">📍 Last Known Location:</span>
+                  <span class="meta-val" id="lastLocation">Vespucci Beach</span>
+                </div>
+                <div class="status-meta-item">
+                  <span class="meta-label">⏱ Time Since Sighting:</span>
+                  <span class="meta-val" id="timeSinceSighting">00:00:00</span>
+                </div>
+                <div class="status-meta-item">
+                  <span class="meta-label">🔫 Threat Rating:</span>
+                  <span class="meta-val text-red" id="threatRating">Extreme</span>
+                </div>
+                <div class="status-meta-item">
+                  <span class="meta-label">💼 Operations Run:</span>
+                  <span class="meta-val" id="totalOpsRun">0</span>
+                </div>
+                <div class="status-meta-item">
+                  <span class="meta-label">✅ Success Rate:</span>
+                  <span class="meta-val text-green" id="successRate">0%</span>
+                </div>
+              </div>
+
+              <!-- Empire Tier -->
+              <div class="empire-tier-block">
+                <div class="empire-label">EMPIRE TIER</div>
+                <div class="empire-name" id="empireTierName">Street Hustler</div>
+                <div class="tier-progress">
+                  <div class="tier-progress-fill" id="tierProgressFill" style="width:10%"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-top:4px;">
+                  <span style="font-size:10px;color:var(--text-dim)">Street Hustler</span>
+                  <span style="font-size:10px;color:var(--text-dim)" id="tierNextLabel">Underboss</span>
+                </div>
+              </div>
+
+              <!-- Streak -->
+              <div class="streak-box">
+                <div>
+                  <div class="streak-num" id="streakCount">0</div>
+                  <div class="streak-label">MISSION STREAK</div>
+                </div>
+                <div>
+                  <div class="streak-bonus" id="streakBonus">+0% reward bonus</div>
+                  <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Complete missions to build streak</div>
+                </div>
+              </div>
+
+              <!-- Heat Cooldown -->
+              <div class="cooldown-wrap">
+                <div class="cooldown-label">
+                  <span>HEAT DECAY COOLDOWN</span>
+                  <span id="cooldownTimer">–</span>
+                </div>
+                <div class="cooldown-bar">
+                  <div class="cooldown-fill" id="cooldownFill" style="width:0%"></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT COL: Quick Actions + Mini Achievements -->
+        <div style="display:flex;flex-direction:column;gap:20px;">
+
+          <!-- Quick Actions -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title"><span class="title-icon">⚡</span> Quick Actions</span>
+            </div>
+            <div class="panel-body">
+              <div class="actions-grid">
+                <button class="action-btn gold" onclick="conductOperation()">💰 Conduct Op</button>
+                <button class="action-btn red" onclick="hitTarget()">🎯 Hit Target</button>
+                <button class="action-btn blue" onclick="bribeCops()">🚔 Bribe Cops</button>
+                <button class="action-btn green" onclick="layLow()">🌿 Lay Low</button>
+              </div>
+              <a class="map-link-btn" href="map.html">
+                <i class="ri-map-2-line"></i> OPEN CITY MAP
+              </a>
+              <a class="map-link-btn" href="missions.html" style="margin-top:8px;color:var(--neon-gold);border-color:rgba(245,197,24,0.3);background:rgba(245,197,24,0.06);">
+                <i class="ri-sword-line"></i> MISSION PLANNER
+              </a>
+            </div>
+          </div>
+
+          <!-- Achievements -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title"><span class="title-icon">🏆</span> Achievements</span>
+              <span class="panel-badge badge-gold" id="achievCount">0/6</span>
+            </div>
+            <div class="panel-body">
+              <div class="achievement-list" id="achievementList">
+                <div class="achievement locked" id="ach-firstblood">🔫 First Blood</div>
+                <div class="achievement locked" id="ach-moneybags">💰 Money Bags</div>
+                <div class="achievement locked" id="ach-ghostmode">👻 Ghost Mode</div>
+                <div class="achievement locked" id="ach-untouchable">🛡️ Untouchable</div>
+                <div class="achievement locked" id="ach-kingpin">👑 Kingpin</div>
+                <div class="achievement locked" id="ach-legend">🌟 Legend</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div><!-- /dashboard-grid -->
+
+      <!-- ─── ROW 3: Charts ─── -->
+      <div class="dashboard-grid-3" id="statsRow2">
+
+        <!-- Earnings Chart -->
+        <div class="panel" style="grid-column:span 2;">
+          <div class="panel-header">
+            <span class="panel-title"><span class="title-icon">📈</span> Earnings & Heat Trend</span>
+            <span class="panel-badge badge-gold">LIVE</span>
+          </div>
+          <div class="panel-body">
+            <div class="chart-container" style="height:240px;">
+              <canvas id="earningsChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success Rate Doughnut -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title"><span class="title-icon">🎯</span> Mission Stats</span>
+          </div>
+          <div class="panel-body">
+            <!-- Progress Ring -->
+            <div class="progress-ring-wrap">
+              <div class="ring-wrap">
+                <svg class="progress-ring-svg" width="160" height="160" id="ringsvg">
+                  <circle class="progress-ring-track" cx="80" cy="80" r="64" stroke-width="10"/>
+                  <circle class="progress-ring-fill" cx="80" cy="80" r="64" stroke-width="10"
+                    stroke="url(#ringGrad)"
+                    id="ringFill"
+                    stroke-dasharray="402"
+                    stroke-dashoffset="402"/>
+                  <defs>
+                    <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stop-color="#f5c518"/>
+                      <stop offset="100%" stop-color="#ff6b00"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div class="ring-inner">
+                  <div class="ring-val text-gold" id="ringValEl">0%</div>
+                  <div class="ring-lbl">SUCCESS</div>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-around;margin-top:12px;">
+              <div style="text-align:center;">
+                <div style="font-family:'Orbitron',monospace;font-size:18px;font-weight:700;color:var(--neon-green);" id="missionWins">0</div>
+                <div style="font-size:11px;color:var(--text-secondary);">COMPLETED</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-family:'Orbitron',monospace;font-size:18px;font-weight:700;color:var(--neon-red);" id="missionFails">0</div>
+                <div style="font-size:11px;color:var(--text-secondary);">FAILED</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-family:'Orbitron',monospace;font-size:18px;font-weight:700;color:var(--neon-blue);" id="missionActive">0</div>
+                <div style="font-size:11px;color:var(--text-secondary);">ACTIVE</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /dashboard-grid-3 -->
+
+      <!-- ─── ROW 4: Territory + Activity Feed + Recent Missions ─── -->
+      <div class="dashboard-grid">
+
+        <!-- Activity Feed -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title"><span class="title-icon">📡</span> Activity Feed</span>
+            <span class="panel-badge badge-blue" id="feedCount">LIVE</span>
+          </div>
+          <div class="panel-body" style="padding:12px 20px;">
+            <div class="feed-list" id="activityFeed">
+              <!-- populated by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Territory + Active Missions -->
+        <div style="display:flex;flex-direction:column;gap:20px;">
+
+          <!-- Territory Control -->
+          <div class="panel" id="territoryPanel">
+            <div class="panel-header">
+              <span class="panel-title"><span class="title-icon">🏙️</span> Territory</span>
+              <span class="panel-badge badge-green" id="totalTerritoryBadge">0%</span>
+            </div>
+            <div class="panel-body">
+              <div id="territoryBars">
+                <!-- populated by JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Missions (quick view) -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title"><span class="title-icon">🗺️</span> Active Missions</span>
+              <a href="missions.html" style="font-size:11px;color:var(--neon-gold);text-decoration:none;letter-spacing:1px;">VIEW ALL →</a>
+            </div>
+            <div class="panel-body">
+              <div class="mission-quick-list" id="activeMissionsList">
+                <div style="color:var(--text-dim);font-size:13px;text-align:center;padding:20px 0;">
+                  No active missions. <a href="missions.html" style="color:var(--neon-gold);">Plan one →</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div><!-- /dashboard-grid -->
+
+    </div><!-- /page-content -->
+  </div><!-- /main-content -->
+</div><!-- /app-wrapper -->
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/dashboard.js"></script>
+
+</body>
+</html>

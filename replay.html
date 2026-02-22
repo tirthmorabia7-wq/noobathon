@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Los Santos — Activity Replay</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="css/dashboard.css"/>
+  <style>
+    /* ─── Replay-specific ─── */
+    .replay-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
+    .ctrl-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      border: 1px solid;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: none;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .ctrl-btn.play  { border-color:rgba(0,255,136,0.5); color:var(--neon-green); }
+    .ctrl-btn.pause { border-color:rgba(245,197,24,0.5); color:var(--neon-gold); }
+    .ctrl-btn.step  { border-color:rgba(0,212,255,0.4); color:var(--neon-blue); }
+    .ctrl-btn.reset { border-color:rgba(255,32,32,0.3); color:var(--neon-red); }
+    .ctrl-btn:hover { transform:scale(1.1); box-shadow: 0 0 12px currentColor; }
+
+    .replay-progress-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .replay-progress-bar {
+      height: 5px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 4px;
+      position: relative;
+      cursor: pointer;
+    }
+    .replay-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--neon-gold), var(--neon-orange));
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+    .replay-index {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .replay-speed {
+      display: flex;
+      gap: 4px;
+    }
+    .speed-btn {
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      background: none;
+      color: var(--text-secondary);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .speed-btn.active { background: rgba(245,197,24,0.12); color: var(--neon-gold); border-color: rgba(245,197,24,0.4); }
+
+    /* ─── Event log ─── */
+    .event-log {
+      max-height: 450px;
+      overflow-y: auto;
+    }
+
+    .event-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      transition: background 0.2s;
+      border-radius: 4px;
+    }
+    .event-row.highlight {
+      background: rgba(245,197,24,0.05);
+      padding-left: 8px;
+    }
+    .event-idx {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+      min-width: 24px;
+    }
+    .event-icon { font-size: 16px; flex-shrink: 0; }
+    .event-text { flex: 1; font-size: 13px; color: var(--text-secondary); }
+    .event-text strong { color: var(--text-primary); }
+    .event-time { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--text-dim); }
+    .event-cash { font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--neon-gold); min-width: 80px; text-align: right; }
+
+    /* ─── Snap metrics ─── */
+    .snap-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .snap-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .snap-val { font-family: 'Orbitron', monospace; font-size: 20px; font-weight: 700; }
+    .snap-lbl { font-size: 10px; color: var(--text-secondary); letter-spacing: 1px; margin-top: 2px; }
+
+    .empty-replay {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-dim);
+    }
+    .empty-replay .er-icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-replay p { font-size: 14px; }
+    .empty-replay a { color: var(--neon-gold); }
+  </style>
+</head>
+<body>
+<div class="toast-container" id="toastContainer"></div>
+<div class="app-wrapper">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">LS</div>
+      <div class="logo-sub">Command Center</div>
+    </div>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebarAvatar">?</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebarUserName">Agent</div>
+        <div class="user-rank">Operative</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="dashboard.html"><span class="nav-icon"><i class="ri-dashboard-3-line"></i></span> Dashboard</a>
+      <a class="nav-item" href="map.html"><span class="nav-icon"><i class="ri-map-2-line"></i></span> City Map</a>
+      <a class="nav-item" href="missions.html"><span class="nav-icon"><i class="ri-sword-line"></i></span> Missions</a>
+      <a class="nav-item active" href="replay.html"><span class="nav-icon"><i class="ri-movie-2-line"></i></span> Activity Replay</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logoutUser()"><i class="ri-logout-box-r-line"></i> LOG OUT</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <span class="topbar-title">ACTIVITY REPLAY</span>
+      <div class="topbar-right">
+        <div class="topbar-clock" id="topbarClock">00:00:00</div>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <h1>🎬 ACTIVITY REPLAY</h1>
+        <p>Replay your criminal empire's history — step through every action, heat spike, and revenue surge.</p>
+      </div>
+
+      <div id="emptyReplay" class="empty-replay" style="display:none;">
+        <div class="er-icon">📭</div>
+        <p>No activity recorded yet.<br/>Head to your <a href="dashboard.html">dashboard</a> and start some operations!</p>
+      </div>
+
+      <div id="replayContent">
+
+        <!-- Snapshot metrics at current step -->
+        <div class="snap-grid">
+          <div class="snap-card">
+            <div class="snap-val text-gold" id="snapCash">$0</div>
+            <div class="snap-lbl">CASH AT STEP</div>
+          </div>
+          <div class="snap-card">
+            <div class="snap-val text-red" id="snapHeat">0%</div>
+            <div class="snap-lbl">HEAT AT STEP</div>
+          </div>
+          <div class="snap-card">
+            <div class="snap-val text-green" id="snapTerritory">0%</div>
+            <div class="snap-lbl">TERRITORY</div>
+          </div>
+        </div>
+
+        <!-- Playback controls -->
+        <div class="replay-controls">
+          <button class="ctrl-btn reset" onclick="replayReset()" title="Reset">⏮</button>
+          <button class="ctrl-btn step" onclick="replayStep(-1)" title="Step back">⏪</button>
+          <button class="ctrl-btn play" id="playBtn" onclick="replayToggle()" title="Play/Pause">▶</button>
+          <button class="ctrl-btn step" onclick="replayStep(1)" title="Step forward">⏩</button>
+
+          <div class="replay-progress-wrap">
+            <div class="replay-progress-bar" id="progressBar" onclick="progressClick(event)">
+              <div class="replay-progress-fill" id="progressFill" style="width:0%"></div>
+            </div>
+            <div class="replay-index" id="replayIndexLabel">Step 0 / 0</div>
+          </div>
+
+          <div class="replay-speed">
+            <button class="speed-btn" onclick="setSpeed(2000)" id="speed1">0.5x</button>
+            <button class="speed-btn active" onclick="setSpeed(1000)" id="speed2">1x</button>
+            <button class="speed-btn" onclick="setSpeed(400)" id="speed3">2.5x</button>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="dashboard-grid-3" style="margin-bottom:20px;">
+          <div class="panel" style="grid-column:span 2;">
+            <div class="panel-header">
+              <span class="panel-title"><span class="title-icon">💰</span> Revenue Timeline</span>
+            </div>
+            <div class="panel-body">
+              <div class="chart-container" style="height:200px;">
+                <canvas id="replayCashChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title"><span class="title-icon">🔥</span> Heat Timeline</span>
+            </div>
+            <div class="panel-body">
+              <div class="chart-container" style="height:200px;">
+                <canvas id="replayHeatChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Event Log -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title"><span class="title-icon">📋</span> Event Log</span>
+            <button onclick="clearHistory()" style="background:rgba(255,32,32,0.1);border:1px solid rgba(255,32,32,0.3);color:var(--neon-red);border-radius:20px;padding:3px 10px;font-size:10px;letter-spacing:1px;cursor:pointer;">CLEAR</button>
+          </div>
+          <div class="panel-body" style="padding:12px 20px;">
+            <div class="event-log" id="eventLog"></div>
+          </div>
+        </div>
+
+      </div><!-- /replayContent -->
+
+    </div><!-- /page-content -->
+  </div><!-- /main-content -->
+</div><!-- /app-wrapper -->
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/replay.js"></script>
+<script>
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) { window.location.href = 'index.html'; return; }
+    const name = user.email.split('@')[0];
+    document.getElementById('sidebarUserName').textContent = name.charAt(0).toUpperCase()+name.slice(1);
+    document.getElementById('sidebarAvatar').textContent = name[0].toUpperCase();
+  });
+  setInterval(() => {
+    const el = document.getElementById('topbarClock');
+    if(el) el.textContent = new Date().toLocaleTimeString('en-US',{hour12:false});
+  }, 1000);
+</script>
+</body>
+</html>

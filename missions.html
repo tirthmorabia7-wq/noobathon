@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Los Santos — Mission Planner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/dashboard.css"/>
+  <style>
+    /* ─── Mission-specific styles ─── */
+    .mission-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media(max-width:700px){ .mission-form-grid{grid-template-columns:1fr;} }
+
+    .form-field { display:flex; flex-direction:column; gap:6px; }
+    .form-label {
+      font-size:11px;
+      color:var(--text-secondary);
+      letter-spacing:2px;
+      text-transform:uppercase;
+      font-weight:600;
+    }
+
+    .form-input {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-color);
+      border-radius:7px;
+      padding:10px 14px;
+      color:var(--text-primary);
+      font-family:'Rajdhani',sans-serif;
+      font-size:15px;
+      font-weight:500;
+      outline:none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width:100%;
+    }
+    .form-input:focus {
+      border-color: rgba(245,197,24,0.5);
+      box-shadow: 0 0 0 2px rgba(245,197,24,0.1);
+    }
+    .form-input option { background:#0f0f14; }
+
+    .btn-primary {
+      width:100%;
+      padding:12px;
+      background:linear-gradient(135deg, rgba(245,197,24,0.2), rgba(255,107,0,0.15));
+      border:1px solid rgba(245,197,24,0.5);
+      border-radius:8px;
+      color:var(--neon-gold);
+      font-family:'Rajdhani',sans-serif;
+      font-size:15px;
+      font-weight:700;
+      letter-spacing:2px;
+      cursor:pointer;
+      transition:all 0.2s;
+      text-transform:uppercase;
+      margin-top:4px;
+    }
+    .btn-primary:hover {
+      background:linear-gradient(135deg, rgba(245,197,24,0.3), rgba(255,107,0,0.25));
+      box-shadow: var(--glow-gold);
+      transform:translateY(-2px);
+    }
+
+    /* ─── Tabs ─── */
+    .tab-bar {
+      display:flex;
+      gap:4px;
+      background:rgba(255,255,255,0.02);
+      border:1px solid var(--border-color);
+      border-radius:8px;
+      padding:4px;
+      margin-bottom:16px;
+    }
+    .tab-btn {
+      flex:1;
+      padding:8px 12px;
+      border-radius:6px;
+      border:none;
+      background:transparent;
+      color:var(--text-secondary);
+      font-family:'Rajdhani',sans-serif;
+      font-size:13px;
+      font-weight:700;
+      letter-spacing:1px;
+      cursor:pointer;
+      transition:all 0.2s;
+      text-transform:uppercase;
+    }
+    .tab-btn.active {
+      background:rgba(245,197,24,0.12);
+      color:var(--neon-gold);
+      border:1px solid rgba(245,197,24,0.25);
+    }
+
+    /* ─── Mission Card ─── */
+    .mission-card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 18px;
+      transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .mission-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; bottom: 0;
+      width: 4px;
+      background: transparent;
+      transition: all 0.3s;
+    }
+    .mission-card:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateX(6px) translateY(-2px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+    .mission-card.active-card::before { background: var(--neon-green); box-shadow: 0 0 15px var(--neon-green); }
+    .mission-card.pending-card::before { background: var(--neon-gold); box-shadow: 0 0 15px var(--neon-gold); }
+    .mission-card.done-card { opacity: 0.55; filter: grayscale(0.2); }
+    .mission-card.failed-card::before { background: var(--neon-red); box-shadow: 0 0 15px var(--neon-red); }
+    .mission-card.locked-card { opacity: 0.3; filter: grayscale(1); cursor: not-allowed; border-color: transparent; }
+
+    .mission-card-icon { 
+      font-size: 32px; 
+      flex-shrink: 0; 
+      width: 48px; 
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 12px;
+    }
+
+    .mission-card-body { flex: 1; min-width: 0; }
+
+    .mc-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+      font-family: 'Orbitron', sans-serif;
+      letter-spacing: 0.5px;
+    }
+    .mc-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+    .mc-meta span { display:flex; align-items:center; gap:4px; }
+
+    .mc-actions { display:flex; gap:8px; }
+    .mc-btn {
+      padding:5px 12px;
+      border-radius:5px;
+      border:1px solid;
+      font-family:'Rajdhani',sans-serif;
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:1px;
+      cursor:pointer;
+      transition:all 0.2s;
+      text-transform:uppercase;
+    }
+    .mc-btn.complete { background:rgba(0,255,136,0.1); border-color:rgba(0,255,136,0.4); color:var(--neon-green); }
+    .mc-btn.complete:hover { background:rgba(0,255,136,0.2); }
+    .mc-btn.fail     { background:rgba(255,32,32,0.1); border-color:rgba(255,32,32,0.3); color:var(--neon-red); }
+    .mc-btn.fail:hover { background:rgba(255,32,32,0.2); }
+    .mc-btn.delete   { background:rgba(255,255,255,0.03); border-color:rgba(255,255,255,0.1); color:var(--text-dim); }
+    .mc-btn.delete:hover { color:var(--neon-red); border-color:rgba(255,32,32,0.3); background:rgba(255,32,32,0.1); }
+    
+
+    .status-tag {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-left: 8px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .status-tag.active { background: rgba(0, 255, 136, 0.15); color: var(--neon-green); border: 1px solid rgba(0, 255, 136, 0.3); box-shadow: 0 0 10px rgba(0, 255, 136, 0.1); }
+    .status-tag.pending { background: rgba(245, 197, 24, 0.1); color: var(--neon-gold); border: 1px solid rgba(245,197,24,0.2); }
+    .status-tag.done { background: rgba(255, 255, 255, 0.05); color: var(--text-dim); border: 1px solid rgba(255,255,255,0.1); }
+    .status-tag.failed { background: rgba(255, 32, 32, 0.1); color: var(--neon-red); border: 1px solid rgba(255,32,32,0.2); }
+    .status-tag.locked { background: rgba(0, 0, 0, 0.2); color: var(--text-dim); border: 1px solid rgba(255,255,255,0.05); }
+
+    .risk-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .risk-low  { background: rgba(0,255,136,0.1); color: var(--neon-green); border: 1px solid rgba(0,255,136,0.2); }
+    .risk-med  { background: rgba(245,197,24,0.1); color: var(--neon-gold); border: 1px solid rgba(245,197,24,0.2); }
+    .risk-high { background: rgba(255,107,0,0.1); color: var(--neon-orange); border: 1px solid rgba(255,107,0,0.2); }
+    .risk-crit { background: rgba(255,32,32,0.1); color: var(--neon-red); border: 1px solid rgba(255,32,32,0.2); }
+
+    .empty-state {
+      text-align:center;
+      padding:40px 20px;
+      color:var(--text-dim);
+      font-size:14px;
+    }
+    .empty-state .es-icon { font-size:36px; margin-bottom:10px; }
+
+    /* ─── Timeline ─── */
+    .timeline { position:relative; padding-left:24px; }
+    .timeline::before {
+      content:'';
+      position:absolute;
+      left:8px; top:0; bottom:0;
+      width:2px;
+      background:var(--border-color);
+    }
+    .tl-item { 
+      position:relative; 
+      margin-bottom:12px; 
+      padding: 10px 12px;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    .tl-item:hover {
+      background: rgba(255,255,255,0.03);
+      transform: translateX(4px);
+    }
+    .tl-dot {
+      position:absolute;
+      left:-20px; top:14px;
+      width:10px; height:10px;
+      border-radius:50%;
+      border:2px solid;
+    }
+    .tl-dot.active { background:var(--neon-green); border-color:var(--neon-green); box-shadow: 0 0 8px var(--neon-green); }
+    .tl-dot.pending { background:var(--neon-gold); border-color:var(--neon-gold); }
+    .tl-dot.done    { background:var(--text-dim); border-color:var(--text-dim); }
+    .tl-dot.failed  { background:var(--neon-red); border-color:var(--neon-red); }
+    .tl-time { font-size:10px; color:var(--text-dim); font-family:'Share Tech Mono',monospace; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 2px; }
+    .tl-content { font-size:14px; font-weight:700; color:#fff; letter-spacing: 0.3px; }
+    .tl-sub { font-size:11px; color:var(--text-secondary); margin-top:1px; font-weight: 500; }
+
+    .overlap-warn {
+      background:rgba(255,32,32,0.08);
+      border:1px solid rgba(255,32,32,0.3);
+      border-radius:7px;
+      padding:10px 14px;
+      font-size:13px;
+      color:var(--neon-red);
+      margin-bottom:14px;
+      display:none;
+    }
+  </style>
+</head>
+<body>
+<div class="toast-container" id="toastContainer"></div>
+<div class="app-wrapper">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">LS</div>
+      <div class="logo-sub">Command Center</div>
+    </div>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebarAvatar">?</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebarUserName">Agent</div>
+        <div class="user-rank" id="sidebarRank">Street Hustler</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="dashboard.html"><span class="nav-icon"><i class="ri-dashboard-3-line"></i></span> Dashboard</a>
+      <a class="nav-item" href="map.html"><span class="nav-icon"><i class="ri-map-2-line"></i></span> City Map</a>
+      <a class="nav-item active" href="missions.html"><span class="nav-icon"><i class="ri-sword-line"></i></span> Missions</a>
+      <a class="nav-item" href="replay.html"><span class="nav-icon"><i class="ri-movie-2-line"></i></span> Activity Replay</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logoutUser()"><i class="ri-logout-box-r-line"></i> LOG OUT</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <span class="topbar-title">MISSION PLANNER</span>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-clock" id="topbarClock">00:00:00</div>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <div class="page-header">
+        <h1>⚔️ MISSION PLANNER</h1>
+        <p>Plan, track, and complete criminal operations across Los Santos.</p>
+      </div>
+
+      <!-- Stats row -->
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px;">
+        <div class="stat-card gold">
+          <div class="card-icon">📋</div>
+          <div class="card-label">Total Missions</div>
+          <div class="card-value" id="statTotal">0</div>
+        </div>
+        <div class="stat-card green">
+          <div class="card-icon">✅</div>
+          <div class="card-label">Completed</div>
+          <div class="card-value" id="statDone">0</div>
+        </div>
+        <div class="stat-card red">
+          <div class="card-icon">💀</div>
+          <div class="card-label">Failed</div>
+          <div class="card-value" id="statFailed">0</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="card-icon">💰</div>
+          <div class="card-label">Total Earned</div>
+          <div class="card-value" id="statEarned" style="font-size:18px;">$0</div>
+        </div>
+      </div>
+
+      <div class="dashboard-grid">
+
+        <!-- LEFT: Create Mission + List -->
+        <div style="display:flex;flex-direction:column;gap:20px;">
+
+          <!-- Overlap warning -->
+          <div class="overlap-warn" id="overlapWarn">
+            ⚠️ WARNING: Multiple high-risk missions are active simultaneously. Heat is increasing faster!
+          </div>
+
+          <!-- Create Form -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title"><span class="title-icon">➕</span> New Mission</span>
+            </div>
+            <div class="panel-body">
+              <div class="mission-form-grid">
+                <div class="form-field" style="grid-column:span 2;">
+                  <label class="form-label">Mission Name</label>
+                  <input type="text" class="form-input" id="mName" placeholder="e.g. Vinewood Vault Heist"/>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Type</label>
+                  <select class="form-input" id="mType">
+                    <option>Heist</option>
+                    <option>Delivery</option>
+                    <option>Surveillance</option>
+                    <option>Ambush</option>
+                    <option>Takeover</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Risk Level</label>
+                  <select class="form-input" id="mRisk">
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Critical">Critical</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Location</label>
+                  <select class="form-input" id="mLocation">
+                    <option>Vespucci Beach Ops</option>
+                    <option>Downtown Syndicate</option>
+                    <option>Mirror Park Cell</option>
+                    <option>Palomino Yard</option>
+                    <option>Strawberry Ring</option>
+                    <option>Rockford Racket</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Expected Reward ($)</label>
+                  <input type="number" class="form-input" id="mReward" placeholder="50000" min="1000"/>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Start Time</label>
+                  <input type="datetime-local" class="form-input" id="mStart"/>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">End Time</label>
+                  <input type="datetime-local" class="form-input" id="mEnd"/>
+                </div>
+              </div>
+              <button class="btn-primary" style="margin-top:14px;" onclick="addMission()">
+                <i class="ri-add-circle-line"></i> PLAN MISSION
+              </button>
+            </div>
+          </div>
+
+          <!-- Mission List -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title"><span class="title-icon">📋</span> Missions</span>
+              <button class="panel-badge badge-red" onclick="clearCompleted()" style="cursor:pointer;border:none;background:rgba(255,32,32,0.1);border:1px solid rgba(255,32,32,0.3);color:var(--neon-red);border-radius:20px;padding:3px 10px;font-size:10px;letter-spacing:1px;">CLEAR DONE</button>
+            </div>
+            <div class="panel-body">
+              <div class="tab-bar">
+                <button class="tab-btn active" id="tab-all"     onclick="switchTab('all')">All</button>
+                <button class="tab-btn"        id="tab-story"   onclick="switchTab('story')">Story Mode</button>
+                <button class="tab-btn"        id="tab-active"  onclick="switchTab('active')">Active</button>
+                <button class="tab-btn"        id="tab-pending" onclick="switchTab('pending')">Upcoming</button>
+                <button class="tab-btn"        id="tab-done"    onclick="switchTab('done')">Done</button>
+              </div>
+              <div id="missionList" style="display:flex;flex-direction:column;gap:10px;">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT: Timeline -->
+        <div class="panel" style="align-self:start;">
+          <div class="panel-header">
+            <span class="panel-title"><span class="title-icon">⏱</span> Timeline</span>
+          </div>
+          <div class="panel-body">
+            <div class="timeline" id="timeline">
+              <div class="empty-state"><div class="es-icon">📅</div>No missions planned yet.</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /dashboard-grid -->
+    </div><!-- /page-content -->
+  </div><!-- /main-content -->
+</div><!-- /app-wrapper -->
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/missions.js"></script>
+<script>
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) { window.location.href = 'index.html'; return; }
+    const name = user.email.split('@')[0];
+    document.getElementById('sidebarUserName').textContent = name.charAt(0).toUpperCase()+name.slice(1);
+    document.getElementById('sidebarAvatar').textContent = name[0].toUpperCase();
+  });
+  setInterval(() => {
+    const el = document.getElementById('topbarClock');
+    if(el) el.textContent = new Date().toLocaleTimeString('en-US',{hour12:false});
+  }, 1000);
+</script>
+</body>
+</html>

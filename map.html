@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Los Santos — City Map</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="css/dashboard.css"/>
+  <style>
+    body { overflow: hidden; }
+    .map-layout { display:flex; height:100vh; margin-left:var(--sidebar-width); }
+
+    /* ─ Map Container ─ */
+    #map {
+      flex: 1;
+      height: 100%;
+      background: #050508;
+    }
+
+    /* Custom Leaflet dark tiles override */
+    .leaflet-container { font-family: 'Rajdhani', sans-serif; }
+    .leaflet-popup-content-wrapper {
+      background: #12121a !important;
+      border: 1px solid rgba(245,197,24,0.4) !important;
+      color: #e8e8f0 !important;
+      border-radius: 10px !important;
+      box-shadow: 0 0 20px rgba(245,197,24,0.15) !important;
+    }
+    .leaflet-popup-tip { background: #12121a !important; }
+    .leaflet-popup-close-button { color: #8888aa !important; }
+
+    /* ─ Map Overlay Panel ─ */
+    .map-controls {
+      position: absolute;
+      top: 80px; right: 20px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .map-control-panel {
+      background: rgba(10,10,13,0.45);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 14px 16px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      min-width: 200px;
+    }
+
+    .map-panel-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--neon-gold);
+      letter-spacing: 2px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .filter-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: color 0.2s;
+    }
+    .filter-toggle:hover { color: var(--text-primary); }
+    .filter-toggle input[type=checkbox] { accent-color: var(--neon-gold); width:14px; height:14px; }
+    .filter-toggle.active-filter { color: var(--text-primary); }
+
+    /* ─ Top bar overlay ─ */
+    .map-topbar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      background: rgba(10,10,13,0.45);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      z-index: 1001;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .map-back-btn {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--neon-gold);
+      text-decoration: none;
+      display: flex; align-items: center; gap:6px;
+      padding: 6px 12px;
+      border: 1px solid rgba(245,197,24,0.3);
+      border-radius: 6px;
+      transition: all 0.2s;
+      letter-spacing: 1px;
+    }
+    .map-back-btn:hover { background: rgba(245,197,24,0.1); }
+
+    .map-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: 3px;
+    }
+
+    .map-live-badge {
+      font-size: 10px;
+      padding: 3px 8px;
+      background: rgba(255,32,32,0.2);
+      border: 1px solid rgba(255,32,32,0.4);
+      border-radius: 4px;
+      color: var(--neon-red);
+      letter-spacing: 2px;
+      font-weight: 700;
+      animation: blink 1.2s infinite;
+    }
+
+    /* ─ Notification banner ─ */
+    .map-notification {
+      position: absolute;
+      top: 68px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255,32,32,0.15);
+      border: 1px solid rgba(255,32,32,0.5);
+      border-radius: 8px;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 1002;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--neon-red);
+      font-family: 'Orbitron', monospace;
+      letter-spacing: 2px;
+      opacity: 0;
+      transition: opacity 0.4s;
+      white-space: nowrap;
+      box-shadow: var(--glow-red);
+      pointer-events: none;
+    }
+    .map-notification.show { opacity: 1; }
+
+    /* ─ Legend ─ */
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .legend-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ─ Stats row ─ */
+    .map-stat {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 12px;
+    }
+    .map-stat .ms-label { color: var(--text-secondary); }
+    .map-stat .ms-val { font-family:'Share Tech Mono',monospace; }
+  </style>
+</head>
+<body>
+<div class="app-wrapper" style="position:relative;">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">LS</div>
+      <div class="logo-sub">Command Center</div>
+    </div>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebarAvatar">?</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebarUserName">Agent</div>
+        <div class="user-rank" id="sidebarRank">Street Hustler</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="dashboard.html"><span class="nav-icon"><i class="ri-dashboard-3-line"></i></span> Dashboard</a>
+      <a class="nav-item active" href="map.html"><span class="nav-icon"><i class="ri-map-2-line"></i></span> City Map</a>
+      <a class="nav-item" href="missions.html"><span class="nav-icon"><i class="ri-sword-line"></i></span> Missions</a>
+      <a class="nav-item" href="replay.html"><span class="nav-icon"><i class="ri-movie-2-line"></i></span> Activity Replay</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="logoutUser()"><i class="ri-logout-box-r-line"></i> LOG OUT</button>
+    </div>
+  </aside>
+
+  <!-- Map layout -->
+  <div class="map-layout" style="position:relative;flex:1;">
+
+    <!-- Map Topbar -->
+    <div class="map-topbar">
+      <a class="map-back-btn" href="dashboard.html"><i class="ri-arrow-left-line"></i> COMMAND</a>
+      <div class="map-title">🗺️ CITY MAP — LOS SANTOS</div>
+      <div class="map-live-badge">● LIVE</div>
+      <div style="margin-left:auto;font-family:'Share Tech Mono';font-size:13px;color:var(--neon-gold);" id="mapClock">00:00</div>
+    </div>
+
+    <!-- HVT Notification -->
+    <div class="map-notification" id="mapNotif">
+      🚨 HIGH-VALUE TARGET SPOTTED
+    </div>
+
+    <!-- Map Element -->
+    <div id="map"></div>
+
+    <!-- Controls -->
+    <div class="map-controls">
+
+      <!-- Filters -->
+      <div class="map-control-panel">
+        <div class="map-panel-title">🔍 Filter Markers</div>
+        <label class="filter-toggle" for="filterOps">
+          <input type="checkbox" id="filterOps" checked onchange="toggleLayer('ops')"/> Operation Zones
+        </label>
+        <label class="filter-toggle" for="filterSafe">
+          <input type="checkbox" id="filterSafe" checked onchange="toggleLayer('safe')"/> Safehouses
+        </label>
+        <label class="filter-toggle" for="filterHot">
+          <input type="checkbox" id="filterHot" checked onchange="toggleLayer('hot')"/> Hot Zones
+        </label>
+        <label class="filter-toggle" for="filterHVT">
+          <input type="checkbox" id="filterHVT" checked onchange="toggleLayer('hvt')"/> HVT Tracker
+        </label>
+        <label class="filter-toggle" for="filterHeat">
+          <input type="checkbox" id="filterHeat" checked onchange="toggleHeatMap()"/> Heat Overlay
+        </label>
+      </div>
+
+      <!-- Legend -->
+      <div class="map-control-panel">
+        <div class="map-panel-title">🗂️ Legend</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#00ff88;"></div> Operation Zone (Low)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f5c518;"></div> Operation Zone (Med)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ff2020;"></div> Operation Zone (High)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#00d4ff;box-shadow:0 0 6px #00d4ff;"></div> Safehouse</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ff6b00;"></div> Hot Zone</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ff0000;animation:blink 1s infinite;box-shadow:0 0 8px red;"></div> HVT (Moving)</div>
+      </div>
+
+      <!-- Live Stats -->
+      <div class="map-control-panel">
+        <div class="map-panel-title">📊 Live Stats</div>
+        <div class="map-stat">
+          <span class="ms-label">Heat Level</span>
+          <span class="ms-val text-red" id="mapHeat">–</span>
+        </div>
+        <div class="map-stat">
+          <span class="ms-label">Active Zones</span>
+          <span class="ms-val text-gold" id="mapZones">–</span>
+        </div>
+        <div class="map-stat">
+          <span class="ms-label">HVT Position</span>
+          <span class="ms-val text-red" id="hvtPos">Tracking…</span>
+        </div>
+        <div class="map-stat">
+          <span class="ms-label">Last Update</span>
+          <span class="ms-val" id="mapLastUpdate" style="color:var(--text-secondary);">–</span>
+        </div>
+      </div>
+
+    </div><!-- /map-controls -->
+
+  </div><!-- /map-layout -->
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="js/auth.js"></script>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Leaflet Heat plugin -->
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+<script src="js/map.js"></script>
+<script>
+  // Setup user from auth
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) { window.location.href = 'index.html'; return; }
+    const name = user.email.split('@')[0];
+    document.getElementById('sidebarUserName').textContent = name.charAt(0).toUpperCase()+name.slice(1);
+    document.getElementById('sidebarAvatar').textContent = name[0].toUpperCase();
+  });
+
+  // Clock
+  setInterval(() => {
+    const el = document.getElementById('mapClock');
+    if(el) el.textContent = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  }, 1000);
+</script>
+</body>
+</html>
